@@ -1,69 +1,33 @@
 name: pipeline2
 
 on:
-
-  # Pipeline automatically chalegi jab main branch par push hoga
   push:
     branches:
       - main
-
-  # GitHub UI se manually bhi pipeline run kar sakte ho
   workflow_dispatch:
 
-# GitHub token ko sirf repository read karne ki permission
 permissions:
   contents: read
 
-
 jobs:
-
   terraform:
-
-    name: Terraform PreProd Deployment
-
+    name: Terraform Deploy
     runs-on: ubuntu-latest
 
-    # Tumhare screenshot ke according Terraform code yahan hai
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
     defaults:
       run:
         working-directory: environment/preprod
 
     steps:
 
-      # ============================================================
-      # 1. CHECKOUT CODE
-      # ============================================================
-
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
-
-
-      # ============================================================
-      # 2. INSTALL TERRAFORM
-      # ============================================================
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-
-      # ============================================================
-      # 3. CHECK TERRAFORM VERSION
-      # ============================================================
-
-      - name: Terraform Version
-        run: terraform version
-
-
-      # ============================================================
-      # 4. AZURE LOGIN
-      #
-      # GitHub Secrets mein ye 4 values honi chahiye:
-      #
-      # AZURE_CLIENT_ID
-      # AZURE_CLIENT_SECRET
-      # AZURE_TENANT_ID
-      # AZURE_SUBSCRIPTION_ID
-      # ============================================================
 
       - name: Azure Login
         uses: azure/login@v2
@@ -72,77 +36,23 @@ jobs:
             {
               "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
               "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
-              "tenantId": "${{ secrets.AZURE_TENANT_ID }}",
-              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
             }
 
-
-      # ============================================================
-      # 5. VERIFY AZURE LOGIN
-      # ============================================================
-
-      - name: Check Azure Account
-        run: az account show
-
-
-      # ============================================================
-      # 6. SELECT SUBSCRIPTION
-      # ============================================================
-
-      - name: Set Azure Subscription
-        run: |
-          az account set \
-            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-          echo "Azure subscription selected successfully."
-
-
-      # ============================================================
-      # 7. DISPLAY AZURE USER / SERVICE PRINCIPAL
-      # ============================================================
-
-      - name: Verify Azure Subscription
-        run: |
-          az account show \
-            --query "{Subscription:name, SubscriptionId:id, TenantId:tenantId}" \
-            --output table
-
-
-      # ============================================================
-      # 8. TERRAFORM FORMAT CHECK
-      # ============================================================
-
-      - name: Terraform fmt
-        run: terraform fmt -check -recursive
-
-
-      # ============================================================
-      # 9. TERRAFORM INIT
-      # ============================================================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
 
       - name: Terraform Init
         run: terraform init
 
-
-      # ============================================================
-      # 10. TERRAFORM VALIDATE
-      # ============================================================
-
       - name: Terraform Validate
         run: terraform validate
 
-
-      # ============================================================
-      # 11. TERRAFORM PLAN
-      # ============================================================
-
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-
-
-      # ============================================================
-      # 12. TERRAFORM APPLY
-      # ============================================================
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
