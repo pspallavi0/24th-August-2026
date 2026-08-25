@@ -112,7 +112,7 @@ jobs:
       # 8. TERRAFORM FORMAT CHECK
       # ============================================================
 
-      - name: Terraform Format Check
+      - name: Terraform fmt
         run: terraform fmt -check -recursive
 
 
